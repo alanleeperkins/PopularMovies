@@ -1,10 +1,12 @@
 package alpitsolutions.com.popularmovies.views;
 
+import android.arch.lifecycle.LifecycleOwner;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import alpitsolutions.com.popularmovies.adapters.FavoriteAdapter;
 import alpitsolutions.com.popularmovies.adapters.TMDbMovieAdapter;
 import alpitsolutions.com.popularmovies.database.FavoritesEntry;
-import alpitsolutions.com.popularmovies.interfaces.OnGetFavoritesCallback;
 import alpitsolutions.com.popularmovies.interfaces.OnGetTMDdMoviesCallback;
 import alpitsolutions.com.popularmovies.interfaces.OnMovieClickCallback;
 import alpitsolutions.com.popularmovies.models.TMDbMovie;
@@ -13,6 +15,7 @@ import alpitsolutions.com.popularmovies.repositories.TMDbRepository;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -27,12 +30,13 @@ import android.widget.Toast;
 import java.util.List;
 
 import alpitsolutions.com.popularmovies.R;
+import alpitsolutions.com.popularmovies.viewmodels.MainViewModel;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = MainActivity.class.getSimpleName();
+    private static final String TAG = "AG6/"+MainActivity.class.getSimpleName();
 
     /* the keys we need for our saved instance bundle */
     private final String KEY_FILTERING_TYPE = "filtering_type";
@@ -41,28 +45,42 @@ public class MainActivity extends AppCompatActivity {
 
     private final int MAIN_ACTIVITY_RESULT_REQUEST_CODE = 1234;
 
-    public static final String KEY_RESULT_DATA_CHANGED = "data_changed";
+    public static final String KEY_FINISH_WITH_ERROR_ID ="finish_with_error_id";
+
+    public static final int ERROR_ID_NO_ERROR = 0;
+    public static final int ERROR_ID_GENERAL_ERROR = -1;
+    public static final int ERROR_ID_CONNECTION_ERROR = -2;
+
+    public enum eAdapterType { None, MovieDbAdapter, FavoritesDbAdapter };
+    public eAdapterType activeAdapterType = eAdapterType.None;
 
     /* the number of columns we want to show [based on the orientation] */
     private final int NUMBER_OF_COLUMNS = 2;
+
     /* indicates if a fetching process is currently running */
     private boolean isRunningMoviesFetching;
+
     /* shows the highest page we currently have the content of */
     private int currentHighestFetchedPage;
+
     /* shows the current filtering type */
     private String moviesFilteringType;
+
     /* shows the current sorting order of the movie list */
     private String moviesSortingType;
 
-    private boolean isSetRefreshList;
+    private boolean isSetShowErrorMessage;
+    private int lastErrorMessageId;
 
-    /* the repository of our remote movie data and local favorites */
-    private PopularMoviesRepository popularMoviesRepository;
+    private MainViewModel viewModel;
 
     @BindView(R.id.movies_listing_layout) LinearLayout loMoviesListingLayout;
     @BindView(R.id.tv_error_info) TextView tvErrorInfo;
+    @BindView(R.id.tv_no_favorite_info) TextView tvNoFavoritesInfo;
     @BindView(R.id.movies_list) RecyclerView rvMoviesRecyclerView;
     @BindView(R.id.info_sorting_order) TextView tvInfoSortingOrder;
+    @BindView(R.id.pullToRefresh) SwipeRefreshLayout pullToRefresh;
+
     /* the moviesAdapter for showing our items */
     private TMDbMovieAdapter moviesAdapter;
     private FavoriteAdapter favoritesAdapter;
@@ -76,14 +94,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        /* default filter type*/
+        /* default filter type */
         moviesFilteringType = PopularMoviesRepository.FILTER_TYPE_NONE;
         /* default sorting type */
         moviesSortingType = TMDbRepository.TMDB_SORTING_BY_POPULAR;
         /* we start with page 1 on requesting the movies */
         currentHighestFetchedPage = 1;
-        /* get's triggered after finishing the detailview */
-        isSetRefreshList = false;
+
+        isSetShowErrorMessage = false;
+        lastErrorMessageId = ERROR_ID_NO_ERROR;
 
         // let's check for some saved instance states
         if (savedInstanceState != null) {
@@ -91,9 +110,6 @@ public class MainActivity extends AppCompatActivity {
             moviesSortingType = savedInstanceState.getString(KEY_SORTING_TYPE);
             currentHighestFetchedPage = savedInstanceState.getInt(KEY_CURRENT_HIGHEST_FETCHED_PAGE);
         }
-
-        /* get an instance of our repository */
-        popularMoviesRepository = PopularMoviesRepository.getInstance(getApplication());
 
         rvMoviesRecyclerView.setLayoutManager( new GridLayoutManager(this,NUMBER_OF_COLUMNS));
 
@@ -116,12 +132,84 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        setupViewModel();
+        setupSwipeRefresher();
+
         /* add the scroll listener for fetching */
         /* TODO: REMOVE ME! */
         addOnScrollListener();
 
         /* now let's load the first page of the movies we wanna see */
-        ReloadMovies();
+        reloadActiveData();
+    }
+
+    /***
+     * setup the view model for your Main Activity and start observing our Favorites
+     */
+    private void setupViewModel()
+    {
+        viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
+        viewModel.getFavorites().observe(this, new Observer<List<FavoritesEntry>>() {
+            @Override
+            public void onChanged(@Nullable List<FavoritesEntry> favoritesEntries) {
+                if (favoritesEntries!=null) {
+                    if (favoritesAdapter == null)
+                        favoritesAdapter = new FavoriteAdapter(favoritesEntries, clickOnMovieCallback);
+                    else
+                        favoritesAdapter.setFavoritesEntryList(favoritesEntries);
+                    Log.d(TAG, "Update Favorites List, FavCnt:" + favoritesEntries.size());
+                }
+                else {
+                    Log.d(TAG, "Update Favorites List, FavCnt:NULL");
+                }
+
+                // update the ui
+                if(getActiveAdapterType() == eAdapterType.FavoritesDbAdapter) {
+                    showFavorites();
+                }
+            }
+        });
+    }
+
+    /***
+     *
+     */
+    private void setupSwipeRefresher()
+    {
+        pullToRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                Log.d(TAG,"swipe refresh detected");
+                reloadActiveData();
+                pullToRefresh.setRefreshing(false);
+            }
+        });
+    }
+
+    private eAdapterType getActiveAdapterType() {return activeAdapterType;}
+
+    /***
+     *
+     * @param adapterType
+     */
+    private void setActiveAdapterType(eAdapterType adapterType)
+    {
+        if (adapterType.equals(activeAdapterType))
+        {
+            Log.d(TAG,"adapter '"+adapterType +"' already set!");
+            return;
+        }
+
+        if (adapterType == eAdapterType.FavoritesDbAdapter) {
+            rvMoviesRecyclerView.setAdapter(favoritesAdapter);
+            activeAdapterType = eAdapterType.FavoritesDbAdapter;
+        }
+        else
+        {
+            rvMoviesRecyclerView.setAdapter(moviesAdapter);
+            activeAdapterType = eAdapterType.MovieDbAdapter;
+        }
+        Log.d(TAG,"new active adapter ='"+adapterType+"'!!!");
     }
 
     /***
@@ -151,12 +239,45 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG,"onResume MainActivity Refresh="+isSetRefreshList);
-        if (isSetRefreshList)
+
+        Log.d(TAG,"onResume MainActivity lastErrorMessageId="+lastErrorMessageId);
+        if (isSetShowErrorMessage)
         {
-            isSetRefreshList = false;
-            ReloadMovies();
+            isSetShowErrorMessage = false;
+            switch (lastErrorMessageId)
+            {
+                case ERROR_ID_NO_ERROR:
+                    // everything is ok
+                    break;
+                case ERROR_ID_GENERAL_ERROR:
+                    break;
+                case ERROR_ID_CONNECTION_ERROR:
+                    showConnectivityErrorMessage();
+                    break;
+            }
         }
+    }
+
+    /***
+     *
+     * @param requestCode
+     * @param resultCode
+     * @param data
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode != MAIN_ACTIVITY_RESULT_REQUEST_CODE)
+            return;
+        if (resultCode != RESULT_OK )
+            return;
+        if (data == null )
+            return;
+
+        lastErrorMessageId = data.getIntExtra(KEY_FINISH_WITH_ERROR_ID,ERROR_ID_NO_ERROR);
+        Log.d(TAG,"RESULT lastErrorMessageId="+lastErrorMessageId);
+        isSetShowErrorMessage = lastErrorMessageId!=ERROR_ID_NO_ERROR;
     }
 
     /**
@@ -186,8 +307,9 @@ public class MainActivity extends AppCompatActivity {
      * set the current page back to 1 and reload all the movies [and genres if necessary]
      * @return
      */
-    private Boolean ReloadMovies()
+    private Boolean reloadActiveData()
     {
+        Log.d(TAG,"reloadActiveData");
         /* we always scroll back to the top when reloading */
         rvMoviesRecyclerView.scrollToPosition(0);
 
@@ -202,7 +324,7 @@ public class MainActivity extends AppCompatActivity {
         else if (moviesFilteringType == PopularMoviesRepository.FILTER_TYPE_FAVORITES) {
             /*we don't need the scroll listener here*/
             removeOnScrollListener();
-            getFavoritesNotPaged();
+            showFavorites();
         }
         else {
             // eerm... well...
@@ -235,26 +357,26 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_sort_popularty:
                 moviesFilteringType = PopularMoviesRepository.FILTER_TYPE_NONE;
                 moviesSortingType = TMDbRepository.TMDB_SORTING_BY_POPULAR;
-                if (!ReloadMovies())
+                if (!reloadActiveData())
                 {
-                    Log.d(TAG, "FAILED: ReloadMovies TMDB_SORTING_BY_POPULAR");
+                    Log.d(TAG, "FAILED: reloadActiveData TMDB_SORTING_BY_POPULAR");
                 }
                 return true;
 
             case R.id.action_sort_top_rated:
                 moviesFilteringType = PopularMoviesRepository.FILTER_TYPE_NONE;
                 moviesSortingType = TMDbRepository.TMDB_SORTING_BY_TOP_RATED;
-                if (!ReloadMovies())
+                if (!reloadActiveData())
                 {
-                    Log.d(TAG, "FAILED: ReloadMovies TMDB_SORTING_BY_TOP_RATED");
+                    Log.d(TAG, "FAILED: reloadActiveData TMDB_SORTING_BY_TOP_RATED");
                 }
                 return true;
 
             case R.id.action_filter_favorites:
                 moviesFilteringType = PopularMoviesRepository.FILTER_TYPE_FAVORITES;
-                if (!ReloadMovies())
+                if (!reloadActiveData())
                 {
-                    Log.d(TAG, "FAILED: ReloadMovies FILTER_TYPE_FAVORITES");
+                    Log.d(TAG, "FAILED: reloadActiveData FILTER_TYPE_FAVORITES");
                 }
                 return true;
 
@@ -283,40 +405,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     /***
-     *
+     * show the favorites in the recycler view
      */
-    private void getFavoritesNotPaged() {
-        popularMoviesRepository.getAllFavorites(new OnGetFavoritesCallback() {
-            @Override
-            public void onStarted() {
-                Log.d(TAG,"start fetching favorites");
-            }
+    private void showFavorites() {
 
-            @Override
-            public void onSuccess(List<FavoritesEntry> favorites) {
+        setActiveAdapterType(eAdapterType.FavoritesDbAdapter);
 
-                if (favoritesAdapter == null) {
-                    favoritesAdapter = new FavoriteAdapter(favorites, clickOnMovieCallback);
-                    rvMoviesRecyclerView.setAdapter(favoritesAdapter);
-                    moviesAdapter = null;
-                }
-                else
-                {
-                    favoritesAdapter.clearFavoritesList();
-                    favoritesAdapter.appendFavoritesToList(favorites);
-                }
-
-                updateTitle();
-                showMovieListingLayout();
-            }
-
-            @Override
-            public void onError() {
-
-            }
-        });
+        if (favoritesAdapter.getItemCount()==0)
+        {
+            showNoFavoritesLayout();
+        }
+        else
+        {
+            updateTitle();
+            showMovieListingLayout();
+        }
     }
 
     /***
@@ -327,8 +431,7 @@ public class MainActivity extends AppCompatActivity {
 
         // fetching is running, so prevent other from calling it again
         isRunningMoviesFetching = true;
-
-        popularMoviesRepository.getMoviesSortedPaged(pageNumber, moviesSortingType, new OnGetTMDdMoviesCallback() {
+        viewModel.getRepository().getMoviesSortedPaged(pageNumber, moviesSortingType, new OnGetTMDdMoviesCallback() {
             @Override
             public void onStarted() {
                 Log.d(TAG,"start fetching pageNumber#"+pageNumber);
@@ -336,18 +439,34 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSuccess(List<TMDbMovie> movies, int page) {
+                Log.d(TAG,"onSuccess movies="+movies.size());
+                if(page == 1 || viewModel.getMovies() == null || viewModel.getMovies().size() == 0)
+                {
+                    Log.d(TAG,"overwrite movies="+movies.size());
+                    viewModel.setMovies(movies);
+                }
+                else
+                {
+                    for (TMDbMovie movie:movies) {
+                        viewModel.getMovies().add(movie);
+                    }
+                    Log.d(TAG,"added new movies="+movies.size());
+                }
+                Log.d(TAG,"new movie size="+viewModel.getMovies().size());
+
                 if (moviesAdapter == null) {
-                    moviesAdapter = new TMDbMovieAdapter(movies, clickOnMovieCallback);
-                    rvMoviesRecyclerView.setAdapter(moviesAdapter);
-                    favoritesAdapter = null;
+                    moviesAdapter = new TMDbMovieAdapter(viewModel.getMovies(), clickOnMovieCallback);
                 } else {
                     if (page == 1) {
+
                         moviesAdapter.clearMoviesList();
                     }
-                    moviesAdapter.appendMoviesToList(movies);
+                    moviesAdapter.appendMoviesToList(viewModel.getMovies());
                 }
+
                 currentHighestFetchedPage = page;
 
+                setActiveAdapterType(eAdapterType.MovieDbAdapter);
                 updateTitle();
                 showMovieListingLayout();
 
@@ -390,7 +509,7 @@ public class MainActivity extends AppCompatActivity {
         if (movie==null)
             return;
 
-        startMovieDetailActivity(movie.getId(),false);
+        startMovieDetailActivity(movie.getId(),true);
     }
 
     /**
@@ -420,23 +539,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
     }
 
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode != MAIN_ACTIVITY_RESULT_REQUEST_CODE)
-            return;
-        if (resultCode != RESULT_OK )
-            return;
-        if (data == null )
-            return;
-
-        boolean dataChanged = data.getBooleanExtra(KEY_RESULT_DATA_CHANGED,false);
-        Log.d(TAG,"RESULT datachanged="+dataChanged);
-        isSetRefreshList = dataChanged;
-    }
-
     /***
      * show a Toast with an error message, if there is any problem with the internet connectivity
      */
@@ -453,8 +555,19 @@ public class MainActivity extends AppCompatActivity {
      */
     private void showErrorLayout()
     {
-        loMoviesListingLayout.setVisibility(View.INVISIBLE);
+        tvNoFavoritesInfo.setVisibility(View.GONE);
+        loMoviesListingLayout.setVisibility(View.GONE);
         tvErrorInfo.setVisibility(View.VISIBLE);
+    }
+
+    /***
+     * tell the user that there are no favorites yet
+     */
+    private void showNoFavoritesLayout()
+    {
+        tvNoFavoritesInfo.setVisibility(View.VISIBLE);
+        loMoviesListingLayout.setVisibility(View.GONE);
+        tvErrorInfo.setVisibility(View.GONE);
     }
 
     /***
@@ -463,7 +576,8 @@ public class MainActivity extends AppCompatActivity {
     private void showMovieListingLayout()
     {
         loMoviesListingLayout.setVisibility(View.VISIBLE);
-        tvErrorInfo.setVisibility(View.INVISIBLE);
+        tvErrorInfo.setVisibility(View.GONE);
+        tvNoFavoritesInfo.setVisibility(View.GONE);
     }
 
 }

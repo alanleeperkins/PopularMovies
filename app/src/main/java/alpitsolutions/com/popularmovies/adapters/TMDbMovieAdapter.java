@@ -3,14 +3,18 @@ package alpitsolutions.com.popularmovies.adapters;
 import alpitsolutions.com.popularmovies.interfaces.OnMovieClickCallback;
 import alpitsolutions.com.popularmovies.models.TMDbMovie;
 import alpitsolutions.com.popularmovies.repositories.TMDbRepository;
+
+import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
@@ -30,6 +34,17 @@ public class TMDbMovieAdapter extends RecyclerView.Adapter<TMDbMovieAdapter.TMDB
     public TMDbMovieAdapter(List<TMDbMovie> moviesList, OnMovieClickCallback onMovieClickCallback) {
         this.moviesList = moviesList;
         this.onMovieClickCallback = onMovieClickCallback;
+    }
+
+
+    /***
+     *
+     * @param moviesList
+     */
+    public void setMoviesList(List<TMDbMovie> moviesList)
+    {
+        this.moviesList = moviesList;
+        notifyDataSetChanged();
     }
 
     /***
@@ -82,6 +97,7 @@ public class TMDbMovieAdapter extends RecyclerView.Adapter<TMDbMovieAdapter.TMDB
         return moviesList.size();
     }
 
+
     /***
      * the view holder for our movies, each view holder contains one single movie data shown in the RecyclerView
      */
@@ -90,6 +106,11 @@ public class TMDbMovieAdapter extends RecyclerView.Adapter<TMDbMovieAdapter.TMDB
         ImageView imgPoster;
         TMDbMovie tmdbMovie;
 
+
+        /**
+         *
+         * @param viewItem
+         */
         public TMDBMovieViewHolder(View viewItem) {
             super(viewItem);
             imgPoster = viewItem.findViewById(R.id.iv_movie_poster);
@@ -103,10 +124,16 @@ public class TMDbMovieAdapter extends RecyclerView.Adapter<TMDbMovieAdapter.TMDB
             });
         }
 
+        /**
+         *
+         * @param movie
+         */
         public void bind(TMDbMovie movie) {
 
             tmdbMovie = movie;
 
+
+            //tmdbMovie.getRating();
             /* use Glide to get the image */
             Glide.with(itemView)
                     .load(TMDbRepository.TMDB_IMAGE_BASE_URL_W185 + movie.getPosterPath())

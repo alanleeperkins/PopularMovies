@@ -14,27 +14,40 @@
             android:id="@+id/info_sorting_order"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
             android:textAlignment="center"
-            android:textSize="22dp"
-            android:textStyle="bold"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:textColor="@color/colorPrimary" />
-
-        <android.support.v7.widget.RecyclerView
-            android:id="@+id/movies_list"
+            android:textAllCaps="true"
+            android:textColor="@color/colorPrimaryDark"
+            android:textSize="12dp"
+            android:textStyle="bold" />
+        <android.support.v4.widget.SwipeRefreshLayout
+            android:id="@+id/pullToRefresh"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="wrap_content">
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/movies_list"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+        </android.support.v4.widget.SwipeRefreshLayout>
     </LinearLayout>
 
 
     <TextView
         android:id="@+id/tv_error_info"
-        android:visibility="invisible"
+        android:visibility="gone"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
         android:text="@string/error_message_connectivity" />
 
+    <TextView
+        android:id="@+id/tv_no_favorite_info"
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true"
+        android:text="@string/no_favorites_message" />
 </RelativeLayout>

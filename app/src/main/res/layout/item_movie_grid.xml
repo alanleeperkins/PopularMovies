@@ -1,15 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/ll_single_movie_grid_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
     android:orientation="vertical"
-    android:padding="5dp"
-    android:layout_width="205dp"
-    android:layout_height="280dp">
+    android:padding="1dp">
 
     <ImageView
         android:id="@+id/iv_movie_poster"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="205dp"
+        android:layout_height="280dp"
         android:background="@color/colorPrimary"
-        android:scaleType="centerCrop"/>
-</LinearLayout>
+        android:scaleType="centerCrop"
+        tools:layout_editor_absoluteX="4dp"
+        tools:layout_editor_absoluteY="0dp" />
+</RelativeLayout >

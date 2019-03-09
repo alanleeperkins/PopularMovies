@@ -1,5 +1,7 @@
 package alpitsolutions.com.popularmovies.views;
 
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
 import android.content.Intent;
 import alpitsolutions.com.popularmovies.database.FavoritesEntry;
 import alpitsolutions.com.popularmovies.interfaces.OnGetFavoriteEntryUpdateCallback;
@@ -15,6 +17,8 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
+import android.support.constraint.ConstraintLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -22,7 +26,6 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,38 +35,38 @@ import com.bumptech.glide.request.RequestOptions;
 import java.util.List;
 
 import alpitsolutions.com.popularmovies.R;
+import alpitsolutions.com.popularmovies.viewmodels.MovieDetailViewModelFactory;
+import alpitsolutions.com.popularmovies.viewmodels.MovieDetailsViewModel;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
 public class MovieDetailActivity extends AppCompatActivity implements OnGetFavoriteEntryUpdateCallback {
 
-    private static final String TAG = MovieDetailActivity.class.getSimpleName();
+    private static final String TAG = "AG6/"+ MovieDetailActivity.class.getSimpleName();
 
     // the keys we need for our saved instance bundle
     private final String KEY_MOVIE_ID = "movie_id";
     private final String KEY_IS_FAVORITE = "is_favorite";
 
     private TMDbMovie movieData=null;
-    private boolean isFavoriteStartValue;
     private boolean isFavorite;
     private int movieId;
 
-    /* the repository of our remote movie data and local favorites */
-    private PopularMoviesRepository popularMoviesRepository;
+    private MovieDetailsViewModel viewModel;
 
-    @BindView(R.id.sv_single_movie_data) ScrollView svwMovieData;
-    @BindView(R.id.pb_loader_state) ProgressBar pbLoadingInProgress;
     @BindView(R.id.iv_movie_details_backdrop) ImageView ivMovieBackdrop;
     @BindView(R.id.tv_movie_details_title) TextView tvMovieTitle;
-    @BindView(R.id.tv_movie_details_overview) TextView tvMovieOverview;
-    @BindView(R.id.tv_move_details_rating) TextView tvMovieRating;
     @BindView(R.id.tv_movie_details_release_data) TextView tvReleaseDate;
+    @BindView(R.id.tv_move_details_rating) TextView tvMovieRating;
+    @BindView(R.id.iv_movie_favorite_toggler) ImageView ivMovieToggleFavorite;
+    @BindView(R.id.tv_movie_details_overview) TextView tvMovieOverview;
     @BindView(R.id.hsv_movie_details_trailers_container) HorizontalScrollView hsvMovieTrailers;
     @BindView(R.id.ll_movie_details_trailers) LinearLayout llMovieTrailers;
     @BindView(R.id.tv_movie_details_trailers_label) TextView tvMovieTrailersLabel;
     @BindView(R.id.ll_movie_details_reviews) LinearLayout llMovieReviews;
     @BindView(R.id.tv_movie_details_reviews_label) TextView tvMovieReviewsLabel;
-    @BindView(R.id.iv_movie_favorite_toggler) ImageView ivMovieToggleFavorite;
+    @BindView(R.id.cl_single_movie_data) ConstraintLayout clMovieData;
+    @BindView(R.id.pb_loader_state) ProgressBar pbLoadingInProgress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,6 +79,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
         if (savedInstanceState != null) {
             movieId = savedInstanceState.getInt(KEY_MOVIE_ID);
             isFavorite = savedInstanceState.getBoolean(KEY_IS_FAVORITE);
+            showMovieFavoriteStateOnUI(isFavorite);
         }
         else
         {
@@ -91,8 +95,8 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
             finish();
         }
 
-        /* get an instance of our repository */
-        popularMoviesRepository = PopularMoviesRepository.getInstance(getApplication());
+
+        setupViewModel();
 
         ivMovieToggleFavorite.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -103,13 +107,24 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
 
         showLoadingInProcessLayout();
 
-        showMovieFavoriteStateOnUI(isFavorite);
-
-        // request the favorite state of that movie, from the database
-        popularMoviesRepository.checkIsFavoriteByMovieId(movieId,this);
-
         // now get the movie details
         getMovieDetails(movieId);
+    }
+
+    /***
+     * setup the view model for the detail view activity with the id of the movie we wanna see
+     */
+    private void setupViewModel()
+    {
+        MovieDetailViewModelFactory factory = new MovieDetailViewModelFactory(this.getApplication(),movieId);
+        viewModel = ViewModelProviders.of(this, factory).get(MovieDetailsViewModel.class);
+        viewModel.getFavorite().observe(this, new Observer<FavoritesEntry>() {
+            @Override
+            public void onChanged(@Nullable FavoritesEntry favoritesEntry) {
+                Log.d(TAG, "receiving database update from LiveData");
+                updateIsFavorite((favoritesEntry!=null));
+            }
+        });
     }
 
     /**
@@ -125,13 +140,15 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
 
     @Override
     public void onBackPressed() {
+        finish();
+    }
 
-        if (isFavoriteStartValue != isFavorite) {
-            Log.d(TAG, "UPDATE DATA LIST  !!!!");
-            Intent returnIntent = new Intent();
-            returnIntent.putExtra(MainActivity.KEY_RESULT_DATA_CHANGED, true);
-            setResult(RESULT_OK, returnIntent);
-        }
+    private void finishWithError(int errorId)
+    {
+        Log.d(TAG, "finish with error id="+errorId);
+        Intent returnIntent = new Intent();
+        returnIntent.putExtra(MainActivity.KEY_FINISH_WITH_ERROR_ID, errorId);
+        setResult(RESULT_OK, returnIntent);
         finish();
     }
 
@@ -142,7 +159,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
     {
         if (isFavorite)
         {
-            popularMoviesRepository.removeAsFavoriteByMoveId(movieId, this);
+            viewModel.getRepository().removeAsFavoriteByMoveId(movieId, this);
         }
         else
         {
@@ -158,7 +175,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
             newfav.setReleaseDate(movieData.getReleaseDate());
             newfav.setTitle(movieData.getTitle());
 
-            popularMoviesRepository.addAsFavorite(newfav,this);
+            viewModel.getRepository().addAsFavorite(newfav,this);
         }
     }
 
@@ -168,20 +185,13 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      */
     private void showMovieFavoriteStateOnUI(boolean favoriteState)
     {
-        int padding = getResources().getDimensionPixelOffset(R.dimen.favorite_toggler_padding);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-
         if (favoriteState)
         {
-           ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_favorite_set);
-           lp.setMargins(padding, padding, padding, padding);
-           ivMovieToggleFavorite.setLayoutParams(lp);
+           ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_star_yellow);
         }
         else
         {
-            ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_favorite_unset);
-            lp.setMargins(padding, padding, padding, padding);
-            ivMovieToggleFavorite.setLayoutParams(lp);
+            ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_star_black);
         }
     }
 
@@ -190,7 +200,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      * @param movieId
      */
     private void getMovieDetails(final int movieId) {
-        popularMoviesRepository.getMovieData(movieId, new OnGetTMDdMovieCallback() {
+        viewModel.getRepository().getMovieData(movieId, new OnGetTMDdMovieCallback() {
 
             @Override
             public void onStarted() {
@@ -199,14 +209,13 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
 
             @Override
             public void onSuccess(TMDbMovie movie) {
-
                 // keep the movie data so we can work with them out that method
                 movieData = movie;
-
                 tvMovieTitle.setText(movie.getTitle());
-                tvMovieOverview.setText(movie.getOverview());
-                tvMovieRating.setText("Rating: "  + movie.getRating().toString());
+
                 tvReleaseDate.setText("Release Date: "+ movie.getReleaseDate());
+                tvMovieRating.setText("Rating: "  + movie.getRating().toString());
+                tvMovieOverview.setText(movie.getOverview());
 
                 /* get the image, but before make sure the user isn't already about to finish the activity */
                 if (isFinishing()==false) {
@@ -225,7 +234,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
             public void onError() {
                 /* we only close the activity in case of an error */
                 Log.d(TAG,"ERROR: Requesting MovieDetails...");
-                finish();
+                finishWithError(MainActivity.ERROR_ID_CONNECTION_ERROR);
             }
         });
     }
@@ -236,7 +245,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      */
     private void getMovieTrailers(TMDbMovie movie)
     {
-        popularMoviesRepository.getMovieTrailers(movie.getId(), new OnGetTMDbTrailersCallback() {
+        viewModel.getRepository().getMovieTrailers(movie.getId(), new OnGetTMDbTrailersCallback() {
             @Override
             public void onSuccess(List<TMDbTrailer> trailers) {
                 if (trailers!=null && trailers.size()>0) {
@@ -273,14 +282,13 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
         });
     }
 
-
     /***
      * gets the movie reviews
      * @param movie
      */
     private void getMovieReviews(TMDbMovie movie)
     {
-        popularMoviesRepository.getMovieReviews(movie.getId(), new OnGetTMDbReviewsCallback() {
+        viewModel.getRepository().getMovieReviews(movie.getId(), new OnGetTMDbReviewsCallback() {
             @Override
             public void onSuccess(List<TMDbReview> reviews) {
                 if (reviews!=null && reviews.size()>0) {
@@ -288,6 +296,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
                     llMovieReviews.setVisibility(View.VISIBLE);
                     llMovieReviews.removeAllViews();
                     for (TMDbReview review : reviews) {
+                        Log.d(TAG, "review from : " + review.getAuthor());
                         View parent = getLayoutInflater().inflate(R.layout.single_movie_review, llMovieReviews, false);
                         TextView author = parent.findViewById(R.id.reviewAuthor);
                         TextView content = parent.findViewById(R.id.reviewContent);
@@ -310,8 +319,8 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      */
     private void showMovieDetailsLayout()
     {
-        pbLoadingInProgress.setVisibility(View.INVISIBLE);
-        svwMovieData.setVisibility(View.VISIBLE);
+        pbLoadingInProgress.setVisibility(View.GONE);
+        clMovieData.setVisibility(View.VISIBLE);
     }
 
     /***
@@ -319,7 +328,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      */
     private void showLoadingInProcessLayout()
     {
-        svwMovieData.setVisibility(View.INVISIBLE);
+        clMovieData.setVisibility(View.GONE);
         pbLoadingInProgress.setVisibility(View.VISIBLE);
     }
 
@@ -340,16 +349,15 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
         Log.v(TAG,"hasStartedAsyncFavoriteDbRequest");
     }
 
-    /**
+    /***
      *
      * @param isFavorite
      */
-    @Override
-    public void isFavorite(Boolean isFavorite) {
-        Log.v(TAG,"hasStartedAsyncFavoriteDbRequest RESULT="+isFavorite);
-        showMovieFavoriteStateOnUI(isFavorite);
-
-        this.isFavoriteStartValue = this.isFavorite = isFavorite;
+    private void updateIsFavorite(Boolean isFavorite)
+    {
+        this.isFavorite = isFavorite;
+        Log.v(TAG,"updateIsFavorite="+this.isFavorite);
+        showMovieFavoriteStateOnUI(this.isFavorite);
     }
 
     /**
@@ -357,8 +365,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      */
     @Override
     public void deletingFavoriteSuccessful() {
-        isFavorite = false;
-        showMovieFavoriteStateOnUI(isFavorite);
+        showMovieFavoriteStateOnUI(false);
         Toast.makeText(getApplicationContext(),"Removed Favorite",Toast.LENGTH_SHORT).show();
     }
 
@@ -367,8 +374,7 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
      */
     @Override
     public void addingFavoriteSuccessful() {
-        isFavorite = true;
-        showMovieFavoriteStateOnUI(isFavorite);
+        showMovieFavoriteStateOnUI(true);
         Toast.makeText(getApplicationContext(),"Added Favorite",Toast.LENGTH_SHORT).show();
     }
 }

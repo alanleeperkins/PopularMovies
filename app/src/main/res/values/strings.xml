@@ -2,14 +2,14 @@
     <string name="app_name">Popular Movies</string>
     <string name="error_message_connectivity">You are offline! Please check your internet connection!</string>
     <string name="error_message_movie_fetching">Fetching Movie-Data failed!</string>
-
+    <string name="no_favorites_message">There are no favorites, yet :-(</string>
     <string name="release_date">Release Date:</string>
-    <string name="sorted_by_top_rated">Movies (sorted by rating)</string>
-    <string name="sorted_by_popularity">Movies (sorted by popularity)</string>
-    <string name="filtered_by_favorites">My Favorites</string>
-    <string name="menu_sorted_by_popularity">Sorted by: Popularity</string>
-    <string name="menu_sorted_by_top_rated">Sorted by: Rating</string>
-    <string name="menu_filtered_by_favorites">My Favorites</string>
+    <string name="sorted_by_top_rated">All Movies (Sorting: Rating)</string>
+    <string name="sorted_by_popularity">All Movies (Sorting: Popularity)</string>
+    <string name="filtered_by_favorites">My Favorite Movies</string>
+    <string name="menu_sorted_by_popularity">Sorting: Popularity</string>
+    <string name="menu_sorted_by_top_rated">Sorting: Rating</string>
+    <string name="menu_filtered_by_favorites">My Favorite Movies</string>
     <string name="title_trailers">Trailers</string>
     <string name="title_reviews">Reviews</string>
 </resources>

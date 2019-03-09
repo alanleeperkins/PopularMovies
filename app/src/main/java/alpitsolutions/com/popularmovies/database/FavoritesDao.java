@@ -1,5 +1,6 @@
 package alpitsolutions.com.popularmovies.database;
 
+import android.arch.lifecycle.LiveData;
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Insert;
 import android.arch.persistence.room.OnConflictStrategy;
@@ -12,7 +13,7 @@ import java.util.List;
 public interface FavoritesDao {
 
     @Query("SELECT * FROM favorites ORDER BY id")
-    List<FavoritesEntry> loadAllFavorites();
+    LiveData<List<FavoritesEntry>> loadAllFavorites();
 
     @Insert
     void insertFavorite(FavoritesEntry favoritesEntry);
@@ -27,6 +28,5 @@ public interface FavoritesDao {
     void deleteAllFavorites();
 
     @Query("SELECT * FROM favorites WHERE movieId = :movieId")
-    List<FavoritesEntry> loadFavoriteByMovieId(int movieId);
-
+    LiveData<FavoritesEntry> loadFavoriteByMovieId(int movieId);
 }

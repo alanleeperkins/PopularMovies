@@ -1,6 +1,8 @@
 package alpitsolutions.com.popularmovies.repositories;
 
 import android.app.Application;
+
+import alpitsolutions.com.popularmovies.database.FavoritesDao;
 import alpitsolutions.com.popularmovies.database.FavoritesEntry;
 import alpitsolutions.com.popularmovies.interfaces.OnGetFavoriteEntryUpdateCallback;
 import alpitsolutions.com.popularmovies.interfaces.OnGetFavoritesCallback;
@@ -19,7 +21,7 @@ public class PopularMoviesRepository {
 
     private static PopularMoviesRepository sInstance;
     private TMDbRepository themoviedbRepository;
-    private FavoritesRepository favoritesRepository;
+    public FavoritesRepository favoritesRepository;
 
     /**
      * returns a new object of our popular movies repository for remote and local data access
@@ -47,10 +49,6 @@ public class PopularMoviesRepository {
         return sInstance;
     }
 
-    public void getAllFavorites(final OnGetFavoritesCallback favoritesCallback) {
-        favoritesRepository.getAllFavorites(favoritesCallback);
-    }
-
     /**
      *
      * @param pageNumber
@@ -60,7 +58,6 @@ public class PopularMoviesRepository {
     public void getMoviesSortedPaged(int pageNumber, String sortingBy, final OnGetTMDdMoviesCallback tmdbCallback) {
         themoviedbRepository.getMoviesSortedPaged(pageNumber,sortingBy, tmdbCallback );
     }
-
 
     /**
      *
@@ -93,16 +90,6 @@ public class PopularMoviesRepository {
 
     /**
      *
-     * @param movieId
-     * @param listener
-     */
-    public void checkIsFavoriteByMovieId(Integer movieId, OnGetFavoriteEntryUpdateCallback listener)
-    {
-        favoritesRepository.checkIsFavoriteByMovieId(movieId,listener);
-    }
-
-    /**
-     *
      * @param favorite
      * @param listener
      */
@@ -110,7 +97,6 @@ public class PopularMoviesRepository {
     {
         favoritesRepository.insert(favorite, listener);
     }
-
 
     /**
      *

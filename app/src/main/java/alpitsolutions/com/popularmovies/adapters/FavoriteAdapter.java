@@ -37,6 +37,17 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.Favori
         this.onMovieClickCallback = onMovieClickCallback;
     }
 
+
+    /***
+     *
+     * @param favoritesEntryList
+     */
+    public void setFavoritesEntryList(List<FavoritesEntry> favoritesEntryList)
+    {
+        this.favoritesEntryList = favoritesEntryList;
+        notifyDataSetChanged();
+    }
+
     /***
      * append the new favoritesEntryList to the list and trigger a notifyDataSetChanged
      * @param newMovies
