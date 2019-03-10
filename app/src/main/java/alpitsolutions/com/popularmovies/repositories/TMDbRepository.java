@@ -1,5 +1,6 @@
 package alpitsolutions.com.popularmovies.repositories;
 
+import alpitsolutions.com.popularmovies.BuildConfig;
 import alpitsolutions.com.popularmovies.interfaces.OnGetTMDbReviewsCallback;
 import alpitsolutions.com.popularmovies.interfaces.OnGetTMDbTrailersCallback;
 import alpitsolutions.com.popularmovies.interfaces.OnGetTMDdMovieCallback;
@@ -23,7 +24,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
  */
 public class TMDbRepository {
 
-    private static final String TAG = TMDbRepository.class.getSimpleName();
+    private static final String TAG = "AG6/" + TMDbRepository.class.getSimpleName();
 
     /* the base url of themovie.db.org for the movie data */
     public static final String TMDB_BASE_URL = "https://api.themoviedb.org/3/";
@@ -45,9 +46,6 @@ public class TMDbRepository {
     public static final String TMDB_SORTING_BY_TOP_RATED = "top_rated";
 
     public static final String TMDB_MOVIE_ID  ="movie_id";
-
-    /* TODO: Make sure you have a legal api-key */
-    private static final String TMDB_API_KEY = "b973102d600e8a1683d0c2d3f52aeb81";
 
     private static TMDbRepository repository;
 
@@ -83,7 +81,7 @@ public class TMDbRepository {
     public void getMovieData(int movieId, final OnGetTMDdMovieCallback tmdbCallback) {
         tmdbCallback.onStarted();
 
-        tmdbApi.getSingleMovieData(movieId, TMDB_API_KEY, TMDB_LANGUAGE)
+        tmdbApi.getSingleMovieData(movieId, BuildConfig.TMDB_API_KEY, TMDB_LANGUAGE)
                 .enqueue(new Callback<TMDbMovie>() {
                     @Override
                     public void onResponse(Call<TMDbMovie> call, Response<TMDbMovie> tmdbResponse) {
@@ -141,12 +139,12 @@ public class TMDbRepository {
 
         switch (sortingBy) {
             case TMDB_SORTING_BY_TOP_RATED:
-                tmdbApi.getMoviesSortingOrderTopRated(TMDB_API_KEY, TMDB_LANGUAGE, pageNumber).enqueue(call);
+                tmdbApi.getMoviesSortingOrderTopRated(BuildConfig.TMDB_API_KEY, TMDB_LANGUAGE, pageNumber).enqueue(call);
                 break;
 
             case TMDB_SORTING_BY_POPULAR:
             default:
-                tmdbApi.getMoviesSortingOrderPopularity(TMDB_API_KEY, TMDB_LANGUAGE, pageNumber).enqueue(call);
+                tmdbApi.getMoviesSortingOrderPopularity(BuildConfig.TMDB_API_KEY, TMDB_LANGUAGE, pageNumber).enqueue(call);
                 break;
         }
     }
@@ -158,7 +156,7 @@ public class TMDbRepository {
      */
     public void getMovieTrailers(int movieId, final OnGetTMDbTrailersCallback tmdbCallback)
     {
-        tmdbApi.getTMDbTrailers(movieId,TMDB_API_KEY,TMDB_LANGUAGE)
+        tmdbApi.getTMDbTrailers(movieId,BuildConfig.TMDB_API_KEY,TMDB_LANGUAGE)
                 .enqueue(new Callback<TMDbTrailerResponse>() {
                     @Override
                     public void onResponse(Call<TMDbTrailerResponse> call, Response<TMDbTrailerResponse> response) {
@@ -189,7 +187,7 @@ public class TMDbRepository {
      */
     public void getMovieReviews(int movieId, final OnGetTMDbReviewsCallback tmdbReviewsCallback)
     {
-        tmdbApi.getTMDbReviews(movieId,TMDB_API_KEY,TMDB_LANGUAGE)
+        tmdbApi.getTMDbReviews(movieId,BuildConfig.TMDB_API_KEY,TMDB_LANGUAGE)
                 .enqueue(new Callback<TMDbReviewResponse>() {
                     @Override
                     public void onResponse(Call<TMDbReviewResponse> call, Response<TMDbReviewResponse> response) {

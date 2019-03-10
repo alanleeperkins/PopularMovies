@@ -49,26 +49,6 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.Favori
     }
 
     /***
-     * append the new favoritesEntryList to the list and trigger a notifyDataSetChanged
-     * @param newMovies
-     */
-    public void appendFavoritesToList(List<FavoritesEntry> newMovies) {
-        favoritesEntryList.addAll(newMovies);
-        notifyDataSetChanged();
-    }
-
-
-    /***
-     * clear the list of favoritesEntryList and rigger a notifyDataSetChanged
-     */
-    public void clearFavoritesList() {
-        favoritesEntryList.clear();
-        notifyDataSetChanged();
-    }
-
-
-
-    /***
      * create a new RecyclerView
      * @param parent
      * @param viewType
@@ -129,7 +109,4 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.Favori
                     .into(imgPoster);
         }
     }
-
-
-
 }

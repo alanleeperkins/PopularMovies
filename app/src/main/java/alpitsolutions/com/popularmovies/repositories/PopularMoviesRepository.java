@@ -14,7 +14,7 @@ import android.util.Log;
 
 public class PopularMoviesRepository {
 
-    private static final String TAG = PopularMoviesRepository.class.getSimpleName();
+    private static final String TAG = "AG6/" + PopularMoviesRepository.class.getSimpleName();
 
     public static final String FILTER_TYPE_NONE = "filter_none";
     public static final String FILTER_TYPE_FAVORITES = "filter_favorites";

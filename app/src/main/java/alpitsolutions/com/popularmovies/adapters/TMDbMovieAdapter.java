@@ -36,7 +36,6 @@ public class TMDbMovieAdapter extends RecyclerView.Adapter<TMDbMovieAdapter.TMDB
         this.onMovieClickCallback = onMovieClickCallback;
     }
 
-
     /***
      *
      * @param moviesList
@@ -44,23 +43,6 @@ public class TMDbMovieAdapter extends RecyclerView.Adapter<TMDbMovieAdapter.TMDB
     public void setMoviesList(List<TMDbMovie> moviesList)
     {
         this.moviesList = moviesList;
-        notifyDataSetChanged();
-    }
-
-    /***
-     * append the new moviesList to the list and trigger a notifyDataSetChanged
-     * @param newMovies
-     */
-    public void appendMoviesToList(List<TMDbMovie> newMovies) {
-        moviesList.addAll(newMovies);
-        notifyDataSetChanged();
-    }
-
-    /***
-     * clear the list of moviesList and rigger a notifyDataSetChanged
-     */
-    public void clearMoviesList() {
-        moviesList.clear();
         notifyDataSetChanged();
     }
 

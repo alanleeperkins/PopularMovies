@@ -36,7 +36,7 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "AG6/"+MainActivity.class.getSimpleName();
+    private static final String TAG = "AG6/" + MainActivity.class.getSimpleName();
 
     /* the keys we need for our saved instance bundle */
     private final String KEY_FILTERING_TYPE = "filtering_type";
@@ -456,12 +456,9 @@ public class MainActivity extends AppCompatActivity {
 
                 if (moviesAdapter == null) {
                     moviesAdapter = new TMDbMovieAdapter(viewModel.getMovies(), clickOnMovieCallback);
-                } else {
-                    if (page == 1) {
-
-                        moviesAdapter.clearMoviesList();
-                    }
-                    moviesAdapter.appendMoviesToList(viewModel.getMovies());
+                }
+                else {
+                    moviesAdapter.setMoviesList(viewModel.getMovies());
                 }
 
                 currentHighestFetchedPage = page;
