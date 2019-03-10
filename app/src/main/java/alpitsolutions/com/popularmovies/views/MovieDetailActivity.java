@@ -11,7 +11,6 @@ import alpitsolutions.com.popularmovies.interfaces.OnGetTMDdMovieCallback;
 import alpitsolutions.com.popularmovies.models.TMDbMovie;
 import alpitsolutions.com.popularmovies.models.TMDbReview;
 import alpitsolutions.com.popularmovies.models.TMDbTrailer;
-import alpitsolutions.com.popularmovies.repositories.PopularMoviesRepository;
 import alpitsolutions.com.popularmovies.repositories.TMDbRepository;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -187,11 +186,11 @@ public class MovieDetailActivity extends AppCompatActivity implements OnGetFavor
     {
         if (favoriteState)
         {
-           ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_star_yellow);
+           ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_star_golden_light);
         }
         else
         {
-            ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_star_black);
+            ivMovieToggleFavorite.setBackgroundResource(R.drawable.ic_star_grey_light);
         }
     }
 

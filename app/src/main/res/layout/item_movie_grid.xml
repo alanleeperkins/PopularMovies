@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout  xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/ll_single_movie_grid_item"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@android:color/black"
     android:gravity="center_horizontal"
     android:orientation="vertical"
     android:padding="1dp">
@@ -16,4 +17,4 @@
         android:scaleType="centerCrop"
         tools:layout_editor_absoluteX="4dp"
         tools:layout_editor_absoluteY="0dp" />
-</RelativeLayout >
+</RelativeLayout>

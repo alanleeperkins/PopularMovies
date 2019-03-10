@@ -11,17 +11,19 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity
-            android:name="alpitsolutions.com.popularmovies.views.MovieDetailActivity"
-            android:screenOrientation="portrait"></activity>
-        <activity
-            android:name="alpitsolutions.com.popularmovies.views.MainActivity"
-            android:screenOrientation="portrait">
+        <activity android:name=".views.SplashScreenActivity" android:theme="@style/SplashScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".views.MovieDetailActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".views.MainActivity"
+            android:screenOrientation="portrait">
         </activity>
     </application>
 
